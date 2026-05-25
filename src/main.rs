@@ -12,6 +12,11 @@ const SHIP_MAX_VEL: f32 = 5.;
 const SHIP_ROT_SPEED: f32 = 5.;
 const SHIP_FRICTION: f32 = 100.;
 
+const BULLET_COOLDOWN: f64 = 0.15;
+const BULLET_SPEED: f32 = 10.;
+const BULLET_SIZE: f32 = 3.;
+const BULLET_LIFE_TIME: f64 = 0.75;
+
 struct Ship {
     pos: Vec2,
     rot: f32,
@@ -53,7 +58,12 @@ async fn main() {
         
         ship.rot = rotate_ship(ship.rot);
         ship = move_ship(ship);
+        
+        (bullets, last_shot) = shoot(bullets, &ship, &last_shot);
+        bullets = move_bullets(bullets);
+
         draw_ship(&ship);
+        draw_bullets(&bullets);
 
         next_frame().await
     }
@@ -112,6 +122,37 @@ fn rotate_ship(rot: f32) -> f32 {
     new_rot
 }
 
+fn shoot(bullets: Vec<Bullet>, ship: &Ship, time: &f64) -> (Vec<Bullet>, f64) {
+    let mut new_bullets = bullets;
+    let mut new_time: f64 = *time;
+
+    if is_key_down(KeyCode::Space) && get_time() - time > BULLET_COOLDOWN {
+        new_time = get_time();
+        new_bullets.push(Bullet {
+            pos: ship.pos,
+            shot_at: get_time(),
+            rot: ship.rot,
+            collided: false,
+        });
+    }
+
+   return (new_bullets, new_time,)
+}
+
+fn move_bullets(bullets: Vec<Bullet>) -> Vec<Bullet> {
+    let mut new_bullets: Vec<Bullet> = bullets;
+
+    new_bullets.retain(|bullet| get_time() - bullet.shot_at < BULLET_LIFE_TIME);
+
+    for bullet in new_bullets.iter_mut() {
+        let vel = vec_from_rad(bullet.rot.to_radians()) * BULLET_SPEED;
+        bullet.pos += vel;
+        bullet.pos = wrap_around(&bullet.pos);
+    }
+
+    new_bullets
+}
+
 fn draw_ship(ship: &Ship) {
     let rot_rad = ship.rot.to_radians();
     let rot_sin = rot_rad.sin();
@@ -131,4 +172,10 @@ fn draw_ship(ship: &Ship) {
     );
 
     draw_triangle_lines(v1, v2, v3, THICKNESS, OBJ_COLOR);
+}
+
+fn draw_bullets(bullets: &Vec<Bullet>) {
+    for bullet in bullets.iter() {
+        draw_circle(bullet.pos.x, bullet.pos.y, BULLET_SIZE, OBJ_COLOR);
+    }
 }
