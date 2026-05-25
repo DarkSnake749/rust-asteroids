@@ -46,6 +46,7 @@ async fn main() {
 
     let mut bullets: Vec<Bullet> = Vec::new();
     let mut asteroids: Vec<Asteroid> = Vec::new();
+    let mut last_shot = get_time();
 
     loop {
         clear_background(BG_COLOR);
