@@ -18,11 +18,18 @@ struct Ship {
     vel: Vec2,
 }
 
-struct Asteroids {
+struct Bullet {
     pos: Vec2,
     vel: Vec2,
-    rot: Vec2,
-    rot_speed: Vec2,
+    rot: f32,
+    collided: bool,
+}
+
+struct Asteroid {
+    pos: Vec2,
+    vel: Vec2,
+    rot: f32,
+    rot_speed: f32,
     size: f32,
     sides: u8,
     collided: bool,
@@ -36,6 +43,9 @@ async fn main() {
             rot: 5.,
             vel: Vec2::new(0., 0.),
     };
+
+    let mut bullets: Vec<Bullet> = Vec::new();
+    let mut asteroids: Vec<Asteroid> = Vec::new();
 
     loop {
         clear_background(BG_COLOR);
