@@ -18,6 +18,16 @@ struct Ship {
     vel: Vec2,
 }
 
+struct Asteroids {
+    pos: Vec2,
+    vel: Vec2,
+    rot: Vec2,
+    rot_speed: Vec2,
+    size: f32,
+    sides: u8,
+    collided: bool,
+}
+
 #[macroquad::main("Rust Asteroids")]
 async fn main() {
 
