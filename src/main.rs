@@ -20,7 +20,7 @@ struct Ship {
 
 struct Bullet {
     pos: Vec2,
-    vel: Vec2,
+    shot_at: f64,
     rot: f32,
     collided: bool,
 }
