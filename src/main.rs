@@ -15,7 +15,9 @@ const SHIP_FRICTION: f32 = 100.;
 const BULLET_COOLDOWN: f64 = 0.15;
 const BULLET_SPEED: f32 = 10.;
 const BULLET_SIZE: f32 = 3.;
-const BULLET_LIFE_TIME: f64 = 0.75;
+const BULLET_LIFE_TIME: f64 = 0.5;
+
+const NB_ASTEROIDS: usize = 10;
 
 struct Ship {
     pos: Vec2,
@@ -50,7 +52,7 @@ async fn main() {
     };
 
     let mut bullets: Vec<Bullet> = Vec::new();
-    let mut asteroids: Vec<Asteroid> = Vec::new();
+    let mut asteroids: Vec<Asteroid> = init_asteroids();
     let mut last_shot = get_time();
 
     loop {
@@ -62,8 +64,11 @@ async fn main() {
         (bullets, last_shot) = shoot(bullets, &ship, &last_shot);
         bullets = move_bullets(bullets);
 
+        asteroids = move_asteroids(asteroids);
+
         draw_ship(&ship);
         draw_bullets(&bullets);
+        draw_asteroids(&asteroids);
 
         next_frame().await
     }
@@ -74,19 +79,40 @@ fn vec_from_rad(rad: f32) -> Vec2 {
     return Vec2::new(rad.sin(), -rad.cos());
 }
 
-fn wrap_around(v: &Vec2) -> Vec2 {
+fn init_asteroids() -> Vec<Asteroid> {
+    let mut list: Vec<Asteroid> = Vec::new();
+    let screen_center: Vec2 = Vec2::new(screen_width() / 2., screen_width() / 2.);
+
+    for i in 0..NB_ASTEROIDS {
+        list.push(Asteroid { 
+            pos: screen_center + Vec2::new(
+                rand::gen_range(-1., 1.), 
+                rand::gen_range(-1., 1.)).normalize() * screen_width().min(screen_height()),
+            vel: Vec2::new(rand::gen_range(-1., 1.), rand::gen_range(-1., 1.)), 
+            rot: 0., 
+            rot_speed: rand::gen_range(-2., 2.), 
+            size: screen_width().min(screen_height()) / 10., 
+            sides: rand::gen_range(3, 8),
+            collided: false
+        });
+    }
+
+    list
+}
+
+fn wrap_around(v: &Vec2, offset: f32) -> Vec2 {
     let mut vr = Vec2::new(v.x, v.y);
-    if vr.x > screen_width() + SHIP_HEIGHT / 2. {
-        vr.x = 0. - SHIP_HEIGHT / 2.;
+    if vr.x > screen_width() + offset {
+        vr.x = 0. - offset;
     }
-    if vr.x < 0. - SHIP_HEIGHT / 2. {
-        vr.x = screen_width() + SHIP_HEIGHT / 2.;
+    if vr.x < 0. - offset {
+        vr.x = screen_width() + offset;
     }
-    if vr.y > screen_height() + SHIP_HEIGHT / 2. {
-        vr.y = 0. - SHIP_HEIGHT / 2.;
+    if vr.y > screen_height() + offset {
+        vr.y = 0. - offset;
     }
-    if vr.y < 0. - SHIP_HEIGHT / 2. {
-        vr.y = screen_height() + SHIP_HEIGHT / 2.;
+    if vr.y < 0. - offset {
+        vr.y = screen_height() + offset;
     }
     vr
 }
@@ -106,7 +132,7 @@ fn move_ship(ship: Ship) -> Ship {
         new_ship.vel = new_ship.vel.normalize() * SHIP_MAX_VEL;
     }
     new_ship.pos += new_ship.vel;
-    new_ship.pos = wrap_around(&new_ship.pos);
+    new_ship.pos = wrap_around(&new_ship.pos, SHIP_HEIGHT / 2.);
     new_ship
 }
 
@@ -147,10 +173,21 @@ fn move_bullets(bullets: Vec<Bullet>) -> Vec<Bullet> {
     for bullet in new_bullets.iter_mut() {
         let vel = vec_from_rad(bullet.rot.to_radians()) * BULLET_SPEED;
         bullet.pos += vel;
-        bullet.pos = wrap_around(&bullet.pos);
+        bullet.pos = wrap_around(&bullet.pos, 0.0);
     }
 
     new_bullets
+}
+
+fn move_asteroids(asteroids: Vec<Asteroid>) -> Vec<Asteroid> {
+    let mut new_asteroids = asteroids;
+    for asteroid in new_asteroids.iter_mut() {
+        asteroid.pos += asteroid.vel;
+        asteroid.pos = wrap_around(&asteroid.pos, asteroid.size / 2.);
+        asteroid.rot += asteroid.rot_speed;
+    }
+
+    new_asteroids
 }
 
 fn draw_ship(ship: &Ship) {
@@ -177,5 +214,19 @@ fn draw_ship(ship: &Ship) {
 fn draw_bullets(bullets: &Vec<Bullet>) {
     for bullet in bullets.iter() {
         draw_circle(bullet.pos.x, bullet.pos.y, BULLET_SIZE, OBJ_COLOR);
+    }
+}
+
+fn draw_asteroids(asteroids: &Vec<Asteroid>) {
+    for asteroid in asteroids.iter() {
+        draw_poly_lines(
+            asteroid.pos.x, 
+            asteroid.pos.y, 
+            asteroid.sides, 
+            asteroid.size, 
+            asteroid.rot, 
+            THICKNESS, 
+            OBJ_COLOR
+        );
     }
 }
