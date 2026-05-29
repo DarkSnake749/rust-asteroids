@@ -27,6 +27,7 @@ struct Ship {
 
 struct Bullet {
     pos: Vec2,
+    vel: Vec2,
     shot_at: f64,
     rot: f32,
     collided: bool,
@@ -159,12 +160,16 @@ fn shoot(bullets: Vec<Bullet>, ship: &Ship, time: &f64) -> (Vec<Bullet>, f64) {
 
     if is_key_down(KeyCode::Space) && get_time() - time > BULLET_COOLDOWN {
         new_time = get_time();
-        new_bullets.push(Bullet {
+        let mut new_bullet = Bullet {
             pos: ship.pos,
+            vel: Vec2::new(0., 0.),
             shot_at: get_time(),
             rot: ship.rot,
             collided: false,
-        });
+        };
+        new_bullet.vel = vec_from_rad(new_bullet.rot.to_radians()) * BULLET_SPEED;
+
+        new_bullets.push(new_bullet);
     }
 
    return (new_bullets, new_time,)
@@ -177,8 +182,7 @@ fn move_bullets(bullets: Vec<Bullet>) -> Vec<Bullet> {
     new_bullets.retain(|bullet| bullet.collided == false);
 
     for bullet in new_bullets.iter_mut() {
-        let vel = vec_from_rad(bullet.rot.to_radians()) * BULLET_SPEED;
-        bullet.pos += vel;
+        bullet.pos += bullet.vel;
         bullet.pos = wrap_around(&bullet.pos, 0.0);
     }
 
@@ -201,6 +205,8 @@ fn move_asteroids(asteroids: Vec<Asteroid>) -> Vec<Asteroid> {
 fn asteroids_bullets_collisions(asteroids: Vec<Asteroid>, bullets: Vec<Bullet>) -> (Vec<Asteroid>, Vec<Bullet>) {
     let mut updated_asteroids = asteroids;
     let mut updated_bullets = bullets;
+    let mut new_asteroids: Vec<Asteroid> = Vec::new();
+
     for asteroid in updated_asteroids.iter_mut() {
         for bullet in updated_bullets.iter_mut() {
             let cmp_size = asteroid.size * asteroid.size;
@@ -208,13 +214,46 @@ fn asteroids_bullets_collisions(asteroids: Vec<Asteroid>, bullets: Vec<Bullet>) 
 
             if dist < cmp_size {
                 asteroid.collided = true;
+                if asteroid.sides > 3 {
+                    new_asteroids = baby_asteroids(new_asteroids, &asteroid, &bullet);
+                };
+
                 bullet.collided = true;
             }
         }
     }
 
+    updated_asteroids.append(&mut new_asteroids);
     (updated_asteroids, updated_bullets)
 } 
+
+fn baby_asteroids(new_asteroids: Vec<Asteroid>, asteroid: &Asteroid, bullet: &Bullet) -> Vec<Asteroid> {
+    let mut new_asteroids: Vec<Asteroid> = new_asteroids;
+
+    let baby_1 = new_asteroid(asteroid, bullet);
+    let baby_2 = new_asteroid(asteroid, bullet);
+
+    new_asteroids.push(baby_1);
+    new_asteroids.push(baby_2);
+
+    new_asteroids
+
+    /* We must do it that way, even if it is not clean, to ensure a that the random values are different 
+    I know it is not clean in code, but it is way cleaner in the actual game :) */
+}
+
+fn new_asteroid(asteroid: &Asteroid, bullet: &Bullet) -> Asteroid {
+    return Asteroid {
+        pos: asteroid.pos,
+        vel: Vec2::new(bullet.vel.y, -bullet.vel.x).normalize()
+            * rand::gen_range(1., 3.),
+        rot: rand::gen_range(0., 360.),
+        rot_speed: rand::gen_range(-2., 2.),
+        size: asteroid.size * 0.8,
+        sides: asteroid.sides - 1,
+        collided: false,
+    }
+}
 
 fn draw_ship(ship: &Ship) {
     let rot_rad = ship.rot.to_radians();
