@@ -85,7 +85,7 @@ fn init_asteroids() -> Vec<Asteroid> {
     let mut list: Vec<Asteroid> = Vec::new();
     let screen_center: Vec2 = Vec2::new(screen_width() / 2., screen_width() / 2.);
 
-    for i in 0..NB_ASTEROIDS {
+    for _ in 0..NB_ASTEROIDS {
         list.push(Asteroid { 
             pos: screen_center + Vec2::new(
                 rand::gen_range(-1., 1.), 
