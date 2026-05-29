@@ -48,13 +48,7 @@ async fn main() {
 
     let mut win = false;
     let mut gameover = false;
-
-    let mut ship = Ship {
-            pos: Vec2::new(screen_width() / 2., screen_height() / 2.),
-            rot: 5.,
-            vel: Vec2::new(0., 0.),
-    };
-
+    let mut ship = init_ship();
     let mut bullets: Vec<Bullet> = Vec::new();
     let mut asteroids: Vec<Asteroid> = init_asteroids();
     let mut last_shot = get_time();
@@ -63,27 +57,49 @@ async fn main() {
         clear_background(BG_COLOR);
 
         if gameover == true {
-            break;
+            let mut text: &str = "You lost! Press [enter] to retry.";
+            if win == true { text = "You won! Press [enter] to retry."; }
+
+            let font_size = 30.;
+            let text_size = measure_text(text, None, font_size as _, 1.0);
+
+            draw_text(
+                text,
+                screen_width() / 2. - text_size.width / 2.,
+                screen_height() / 2. - text_size.height / 2.,
+                font_size,
+                OBJ_COLOR,
+            );
+
+            if is_key_pressed(KeyCode::Enter) {
+                win = false;
+                gameover = false;
+                ship = init_ship();
+                bullets = Vec::new();
+                asteroids = init_asteroids();
+                last_shot = get_time();
+            }
+        } 
+
+        else {
+            ship.rot = rotate_ship(ship.rot);
+            ship = move_ship(ship);
+            
+            (bullets, last_shot) = shoot(bullets, &ship, &last_shot);
+            bullets = move_bullets(bullets);
+
+            (asteroids, bullets) = asteroids_bullets_collisions(asteroids, bullets);
+            asteroids = move_asteroids(asteroids);
+
+            gameover = player_asteroids_collisions(&ship, &asteroids, gameover);
+            if gameover == false {
+                (gameover, win) = check_win(gameover, win, &asteroids);
+            }
+
+            draw_ship(&ship);
+            draw_bullets(&bullets);
+            draw_asteroids(&asteroids);
         }
-        
-        ship.rot = rotate_ship(ship.rot);
-        ship = move_ship(ship);
-        
-        (bullets, last_shot) = shoot(bullets, &ship, &last_shot);
-        bullets = move_bullets(bullets);
-
-        (asteroids, bullets) = asteroids_bullets_collisions(asteroids, bullets);
-        asteroids = move_asteroids(asteroids);
-
-        gameover = player_asteroids_collisions(&ship, &asteroids, gameover);
-        if gameover == false {
-            (gameover, win) = check_win(gameover, win, &asteroids);
-        }
-
-        draw_ship(&ship);
-        draw_bullets(&bullets);
-        draw_asteroids(&asteroids);
-
         next_frame().await
     }
 }
@@ -91,6 +107,15 @@ async fn main() {
 /// Returns a Vec2 from a rotation in radians.
 fn vec_from_rad(rad: f32) -> Vec2 {
     return Vec2::new(rad.sin(), -rad.cos());
+}
+
+fn init_ship() -> Ship {
+    return 
+        Ship {
+            pos: Vec2::new(screen_width() / 2., screen_height() / 2.),
+            rot: 5.,
+            vel: Vec2::new(0., 0.),
+        };
 }
 
 fn init_asteroids() -> Vec<Asteroid> {
