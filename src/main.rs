@@ -15,7 +15,7 @@ const SHIP_FRICTION: f32 = 100.;
 const BULLET_COOLDOWN: f64 = 0.15;
 const BULLET_SPEED: f32 = 10.;
 const BULLET_SIZE: f32 = 3.;
-const BULLET_LIFE_TIME: f64 = 0.5;
+const BULLET_LIFE_TIME: f64 = 0.75;
 
 const NB_ASTEROIDS: usize = 10;
 
@@ -64,6 +64,7 @@ async fn main() {
         (bullets, last_shot) = shoot(bullets, &ship, &last_shot);
         bullets = move_bullets(bullets);
 
+        (asteroids, bullets) = asteroids_bullets_collisions(asteroids, bullets);
         asteroids = move_asteroids(asteroids);
 
         draw_ship(&ship);
@@ -115,6 +116,10 @@ fn wrap_around(v: &Vec2, offset: f32) -> Vec2 {
         vr.y = screen_height() + offset;
     }
     vr
+}
+
+fn calculate_dist(p1: &Vec2, p2: &Vec2) -> f32 {
+    (p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y)
 }
 
 fn move_ship(ship: Ship) -> Ship {
@@ -169,6 +174,7 @@ fn move_bullets(bullets: Vec<Bullet>) -> Vec<Bullet> {
     let mut new_bullets: Vec<Bullet> = bullets;
 
     new_bullets.retain(|bullet| get_time() - bullet.shot_at < BULLET_LIFE_TIME);
+    new_bullets.retain(|bullet| bullet.collided == false);
 
     for bullet in new_bullets.iter_mut() {
         let vel = vec_from_rad(bullet.rot.to_radians()) * BULLET_SPEED;
@@ -181,6 +187,8 @@ fn move_bullets(bullets: Vec<Bullet>) -> Vec<Bullet> {
 
 fn move_asteroids(asteroids: Vec<Asteroid>) -> Vec<Asteroid> {
     let mut new_asteroids = asteroids;
+    new_asteroids.retain(|asteroid| asteroid.collided == false);
+
     for asteroid in new_asteroids.iter_mut() {
         asteroid.pos += asteroid.vel;
         asteroid.pos = wrap_around(&asteroid.pos, asteroid.size / 2.);
@@ -189,6 +197,24 @@ fn move_asteroids(asteroids: Vec<Asteroid>) -> Vec<Asteroid> {
 
     new_asteroids
 }
+
+fn asteroids_bullets_collisions(asteroids: Vec<Asteroid>, bullets: Vec<Bullet>) -> (Vec<Asteroid>, Vec<Bullet>) {
+    let mut updated_asteroids = asteroids;
+    let mut updated_bullets = bullets;
+    for asteroid in updated_asteroids.iter_mut() {
+        for bullet in updated_bullets.iter_mut() {
+            let cmp_size = asteroid.size * asteroid.size;
+            let dist = calculate_dist(&bullet.pos, &asteroid.pos);
+
+            if dist < cmp_size {
+                asteroid.collided = true;
+                bullet.collided = true;
+            }
+        }
+    }
+
+    (updated_asteroids, updated_bullets)
+} 
 
 fn draw_ship(ship: &Ship) {
     let rot_rad = ship.rot.to_radians();
