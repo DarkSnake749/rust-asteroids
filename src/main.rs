@@ -46,6 +46,9 @@ struct Asteroid {
 #[macroquad::main("Rust Asteroids")]
 async fn main() {
 
+    let mut win = false;
+    let mut gameover = false;
+
     let mut ship = Ship {
             pos: Vec2::new(screen_width() / 2., screen_height() / 2.),
             rot: 5.,
@@ -58,6 +61,10 @@ async fn main() {
 
     loop {
         clear_background(BG_COLOR);
+
+        if gameover == true {
+            break;
+        }
         
         ship.rot = rotate_ship(ship.rot);
         ship = move_ship(ship);
@@ -67,6 +74,11 @@ async fn main() {
 
         (asteroids, bullets) = asteroids_bullets_collisions(asteroids, bullets);
         asteroids = move_asteroids(asteroids);
+
+        gameover = player_asteroids_collisions(&ship, &asteroids, gameover);
+        if gameover == false {
+            (gameover, win) = check_win(gameover, win, &asteroids);
+        }
 
         draw_ship(&ship);
         draw_bullets(&bullets);
@@ -226,6 +238,30 @@ fn asteroids_bullets_collisions(asteroids: Vec<Asteroid>, bullets: Vec<Bullet>) 
     updated_asteroids.append(&mut new_asteroids);
     (updated_asteroids, updated_bullets)
 } 
+
+fn player_asteroids_collisions(ship: &Ship, asteroids: &Vec<Asteroid>, gameover: bool) -> bool {
+    let mut new_gameover = gameover;
+    for asteroid in asteroids.iter() {
+        if (asteroid.pos - ship.pos).length() < asteroid.size + SHIP_HEIGHT / 3. {
+                new_gameover = true;
+                break;
+        }
+    }
+
+    new_gameover
+}
+
+fn check_win(gameover: bool, win: bool, asteroids: &Vec<Asteroid>) -> (bool, bool) {
+    let mut new_gameover = gameover;
+    let mut new_win = win;
+    
+    if asteroids.len() < 1 {
+        new_win = true;
+        new_gameover = true;
+    }
+
+    return (new_gameover, new_win);
+}
 
 fn baby_asteroids(new_asteroids: Vec<Asteroid>, asteroid: &Asteroid, bullet: &Bullet) -> Vec<Asteroid> {
     let mut new_asteroids: Vec<Asteroid> = new_asteroids;
